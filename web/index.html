@@ -60,6 +60,39 @@
     isFront = !isFront;
     card.textContent = isFront ? frontText : backText;
   });
+  <script>
+  const card = document.getElementById("card");
+
+  const perfectBtn = document.querySelector(".perfect");
+  const againBtn = document.querySelector(".again");
+  const badBtn = document.querySelector(".bad");
+
+  const cardId = "card_1";
+
+  let isFront = true;
+
+  const frontText = "憲法とは何か";
+  const backText = "国家権力を制限する法である";
+
+  // 表示初期化
+  card.textContent = frontText;
+
+  // 表⇄裏
+  card.addEventListener("click", () => {
+    isFront = !isFront;
+    card.textContent = isFront ? frontText : backText;
+  });
+
+  // 習熟度保存
+  function saveStatus(status) {
+    localStorage.setItem(cardId, status);
+    alert("習熟度を保存しました：" + status);
+  }
+
+  perfectBtn.onclick = () => saveStatus("完璧");
+  againBtn.onclick = () => saveStatus("もう1回");
+  badBtn.onclick = () => saveStatus("全然ダメ");
+</script>
 </script>
 </body>
 </html>

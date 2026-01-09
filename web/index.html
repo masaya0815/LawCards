@@ -48,6 +48,18 @@
     <button class="again">もう1回</button>
     <button class="bad">全然ダメ</button>
   </div>
+<script>
+  const card = document.getElementById("card");
 
+  let isFront = true;
+
+  const frontText = "憲法とは何か";
+  const backText = "国家権力を制限する法である";
+
+  card.addEventListener("click", () => {
+    isFront = !isFront;
+    card.textContent = isFront ? frontText : backText;
+  });
+</script>
 </body>
 </html>

@@ -2,138 +2,240 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LawCards</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-  background: #f5f6f8;
-  display: flex;
-  justify-content: center;
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:#f2f4f8;
 }
 
-.container {
-  width: 100%;
-  max-width: 420px;
-  padding: 20px;
-  box-sizing: border-box;
+.app{
+  height:100vh;
+  display:flex;
+  flex-direction:column;
 }
 
-.card-area {
-  height: 260px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 40px;
+/* ===== 上 ===== */
+.header{
+  padding:12px;
+  text-align:center;
+  font-weight:600;
 }
 
-.card {
-  width: 100%;
-  height: 100%;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 18px;
-  padding: 20px;
-  text-align: center;
+/* ===== 中央 ===== */
+.main{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:12px;
 }
 
-.buttons {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 30px;
+.card-container{perspective:1000px;}
+
+.card{
+  width:300px;
+  height:180px;
+  position:relative;
+  transform-style:preserve-3d;
+  transition:transform .6s;
 }
 
-button {
-  padding: 12px 18px;
-  border-radius: 12px;
-  border: none;
-  font-size: 16px;
-  background: #e0e0e0;
+.card.is-flipped{transform:rotateY(180deg);}
+
+.card-face{
+  position:absolute;
+  width:100%;
+  height:100%;
+  background:white;
+  border-radius:18px;
+  box-shadow:0 10px 25px rgba(0,0,0,.15);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+  font-size:17px;
+  text-align:center;
+  backface-visibility:hidden;
 }
 
-.file {
-  margin-top: 30px;
-  text-align: center;
+.card-back{transform:rotateY(180deg);}
+
+.level{
+  font-size:14px;
+  font-weight:600;
+}
+.perfect{color:#2ecc71;}
+.retry{color:#f1c40f;}
+.bad{color:#e74c3c;}
+.unlearned{color:#7f8c8d;}
+
+/* ===== 下 ===== */
+.footer{
+  padding:16px 0 24px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:14px;
+}
+
+.buttons{
+  display:flex;
+  gap:12px;
+}
+
+button{
+  padding:10px 16px;
+  border:none;
+  border-radius:20px;
+  font-size:14px;
+}
+
+.bad-btn{background:#e74c3c;color:white;}
+.retry-btn{background:#f1c40f;}
+.perfect-btn{background:#2ecc71;color:white;}
+
+.nav{
+  display:flex;
+  gap:16px;
+}
+
+.nav button{
+  background:#e0e0e0;
 }
 </style>
 </head>
 
 <body>
-<div class="container">
+<div class="app">
 
-  <div class="card-area">
-    <div id="card" class="card">
-      CSVを読み込んでください
+  <div class="header">Law Cards</div>
+
+  <div class="main">
+    <div class="card-container">
+      <div class="card" id="card">
+        <div class="card-face" id="front"></div>
+        <div class="card-face card-back" id="back"></div>
+      </div>
     </div>
+    <div class="level" id="level"></div>
   </div>
 
-  <div class="buttons">
-    <button onclick="prev()">←</button>
-    <button onclick="flip()">表/裏</button>
-    <button onclick="next()">→</button>
-  </div>
+  <div class="footer">
+    <div class="buttons">
+      <button class="bad-btn" id="bad">全然ダメ</button>
+      <button class="retry-btn" id="retry">もう1回</button>
+      <button class="perfect-btn" id="perfect">完璧</button>
+    </div>
 
-  <div class="file">
-    <input type="file" accept=".csv" onchange="loadCSV(this)">
+    <div class="nav">
+      <button id="prev">←</button>
+      <button id="next">→</button>
+    </div>
+
+    <input type="file" accept=".csv" id="csv">
   </div>
 
 </div>
 
 <script>
-let cards = [];
-let index = 0;
-let isFront = true;
+let cards=[];
+let index=0;
 
-function loadCSV(input) {
-  const file = input.files[0];
-  if (!file) return;
+const card=document.getElementById("card");
+const front=document.getElementById("front");
+const back=document.getElementById("back");
+const level=document.getElementById("level");
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    const lines = reader.result.split("\n").slice(1);
-    cards = lines
-      .map(l => l.trim())
-      .filter(l => l)
-      .map(l => {
-        const [front, back] = l.split(",");
-        return { front, back };
-      });
+/* ===== 永続読込 ===== */
+const saved=localStorage.getItem("lawcards");
+if(saved){
+  cards=JSON.parse(saved);
+  render();
+}
 
-    index = 0;
-    isFront = true;
-    showCard();
+/* ===== CSV読込 ===== */
+document.getElementById("csv").addEventListener("change",e=>{
+  const file=e.target.files[0];
+  if(!file)return;
+
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const lines=reader.result.split("\n").slice(1);
+    cards=lines.map(l=>l.trim()).filter(l=>l).map(l=>{
+      const [f,b]=l.split(",");
+      return {f,b,l:"未学習"};
+    });
+    index=0;
+    save();
+    render();
   };
-  reader.readAsText(file, "UTF-8");
+  reader.readAsText(file,"UTF-8");
+});
+
+/* ===== 表示 ===== */
+function render(){
+  if(cards.length===0){
+    front.textContent="CSVを読み込んでください";
+    back.textContent="";
+    level.textContent="";
+    return;
+  }
+  const c=cards[index];
+  front.textContent=c.f;
+  back.textContent=c.b;
+  level.textContent="習熟度："+c.l;
+  level.className="level "+(
+    c.l==="完璧"?"perfect":
+    c.l==="もう1回"?"retry":
+    c.l==="全然ダメ"?"bad":"unlearned"
+  );
 }
 
-function showCard() {
-  if (cards.length === 0) return;
-  document.getElementById("card").innerText =
-    isFront ? cards[index].front : cards[index].back;
+/* ===== 保存 ===== */
+function save(){
+  localStorage.setItem("lawcards",JSON.stringify(cards));
 }
 
-function flip() {
-  isFront = !isFront;
-  showCard();
-}
+/* ===== フリップ ===== */
+card.onclick=()=>card.classList.toggle("is-flipped");
 
-function next() {
-  index = (index + 1) % cards.length;
-  isFront = true;
-  showCard();
-}
+/* ===== 習熟度 ===== */
+document.getElementById("perfect").onclick=()=>{cards[index].l="完璧";save();render();}
+document.getElementById("retry").onclick=()=>{cards[index].l="もう1回";save();render();}
+document.getElementById("bad").onclick=()=>{cards[index].l="全然ダメ";save();render();}
 
-function prev() {
-  index = (index - 1 + cards.length) % cards.length;
-  isFront = true;
-  showCard();
-}
+/* ===== ナビ ===== */
+document.getElementById("next").onclick=()=>{
+  if(index<cards.length-1){
+    card.classList.remove("is-flipped");
+    index++;
+    render();
+  }
+};
+document.getElementById("prev").onclick=()=>{
+  if(index>0){
+    card.classList.remove("is-flipped");
+    index--;
+    render();
+  }
+};
+
+/* ===== スワイプ ===== */
+let sx=0;
+card.addEventListener("touchstart",e=>sx=e.touches[0].clientX);
+card.addEventListener("touchend",e=>{
+  const d=e.changedTouches[0].clientX-sx;
+  if(Math.abs(d)<40)return;
+  card.classList.remove("is-flipped");
+  if(d<0&&index<cards.length-1)index++;
+  if(d>0&&index>0)index--;
+  render();
+});
 </script>
-
 </body>
 </html>
